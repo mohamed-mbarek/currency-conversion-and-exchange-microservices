@@ -13,10 +13,12 @@ spring:
   jpa:
     show-sql: true
     defer-datasource-initialization: true
+
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka
+
 resilience4j:
   retry:
     instances:
@@ -25,3 +27,11 @@ resilience4j:
         wait-duration: 1s
         enable-exponential-backoff: true
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0 #SB3
+
+logging:
+  pattern:
+    level: 5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]
