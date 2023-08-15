@@ -1,64 +1,37 @@
-version: '3.7'
+server:
+  port: 8000
+spring:
+  application:
+    name: currency-exchange
+  config:
+    import: optional:configserver:http://localhost:8888
+  h2:
+    console:
+      enabled: true
+  datasource:
+    url: jdbc:h2:mem:testdb
+  jpa:
+    show-sql: true
+    defer-datasource-initialization: true
 
-services:
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
-  currency-exchange:
-    image: in28min/currency-exchange-service:0.0.1-SNAPSHOT
-    mem_limit: 700m
-    ports:
-      - "8000:8000"
-    networks:
-      - currency-network
-    depends_on:
-      - naming-server
-    environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      MANAGEMENT.ZIPKIN.TRACING.ENDPOINT: http://zipkin-server:9411/api/v2/spans
+resilience4j:
+  retry:
+    instances:
+      sample-api:
+        max-attempts: 5
+        wait-duration: 1s
+        enable-exponential-backoff: true
 
-  currency-conversion:
-    image: in28min/currency-conversion-service:0.0.1-SNAPSHOT
-    mem_limit: 700m
-    ports:
-      - "8100:8100"
-    networks:
-      - currency-network
-    depends_on:
-      - naming-server
-    environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      MANAGEMENT.ZIPKIN.TRACING.ENDPOINT: http://zipkin-server:9411/api/v2/spans
+management:
+  tracing:
+    sampling:
+      probability: 1.0 #SB3
 
-  api-gateway:
-    image: in28min/api-gateway:0.0.1-SNAPSHOT
-    mem_limit: 700m
-    ports:
-      - "8765:8765"
-    networks:
-      - currency-network
-    depends_on:
-      - naming-server
-    environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      MANAGEMENT.ZIPKIN.TRACING.ENDPOINT: http://zipkin-server:9411/api/v2/spans
-
-  naming-server:
-    image: in28min/naming-server:0.0.1-SNAPSHOT
-    mem_limit: 700m
-    ports:
-      - "8761:8761"
-    networks:
-      - currency-network
-  
-  #docker run -p 9411:9411 openzipkin/zipkin:2.23
-
-  zipkin-server:
-    image: openzipkin/zipkin:2.23
-    mem_limit: 300m
-    ports:
-      - "9411:9411"
-    networks:
-      - currency-network
-    restart: always #Restart if there is a problem starting up
-
-networks:
-  currency-network:
+logging:
+  pattern:
+    level: 5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]
